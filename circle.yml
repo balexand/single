@@ -1,0 +1,17 @@
+version: 2.1
+jobs:
+  build:
+    working_directory: ~/igc
+    docker:
+      - image: elixir:1.8.1-alpine
+
+    environment:
+      MIX_ENV: test
+
+    steps:
+      - checkout
+      - run: mix local.hex --force
+      - run: mix local.rebar --force
+
+      - run: mix deps.get
+      - run: mix test
