@@ -1,70 +1,69 @@
 defmodule Single do
   @moduledoc """
-  Manager process that starts and watches a singleton process. This process should be started on
-  each node that the singleton process will be run on. The Erlang
-  [`:global` module](http://erlang.org/doc/man/global.html) is responsible for ensuring that there
-  are not duplicate instances of the singleton process within the cluster.
-
-  If the singleton process has not already been started then it will be started and linked to the
-  manager process. If the singleton process exits for any reason, whether `:normal` or otherwise,
-  then the `Single` process will exit with the same reason. If the manager process exits with a
-  reason other than `:normal` then the singleton process will exit with the same reason.
-
-  If the singleton process is already started then the manager process will monitor it. If the
-  remote singleton process exits for any reason then the manager process will try to start it
-  again.
+  Singleton watchdog process
+  Each node that the singleton runs on, runs this process. It is
+  responsible for starting the singleton process (with the help of
+  Erlang's 'global' module).
+  When starting the singleton process fails, it instead monitors the
+  process, so that in case it dies, it will try to start it locally.
+  The singleton process is started using the `GenServer.start_link`
+  call, with the given module and args.
   """
 
-  use GenServer
+  use GenServer, restart: :transient
+
+  require Logger
+
+  @doc """
+  Start the manager process, registering it under a unique name.
+  """
+  def start_link(
+        mod: mod,
+        args: args,
+        name: name,
+        child_name: child_name,
+        on_conflict: on_conflict
+      ) do
+    GenServer.start_link(__MODULE__, [mod, args, name, on_conflict], name: child_name)
+  end
 
   defmodule State do
     @moduledoc false
-    defstruct [:init_arg, :module, :name, :ref, :ref_type]
-  end
-
-  def start(module, init_arg, name, options \\ []) do
-    state = %State{init_arg: init_arg, module: module, name: name}
-    GenServer.start(__MODULE__, state, options)
-  end
-
-  def start_link(module, init_arg, name, options \\ []) do
-    state = %State{init_arg: init_arg, module: module, name: name}
-    GenServer.start_link(__MODULE__, state, options)
-  end
-
-  ###
-  # GenServer callbacks
-  ###
-
-  @doc false
-  def init(%State{} = state) do
-    {:ok, start_child(state)}
+    defstruct pid: nil, mod: nil, args: nil, name: nil, on_conflict: nil
   end
 
   @doc false
-  def handle_info({:DOWN, ref, :process, _, :normal}, %State{ref: ref, ref_type: :local} = state) do
-    # Local process exited normally. This process should do the same.
+  def init([mod, args, name, on_conflict]) do
+    state = %State{mod: mod, args: args, name: name, on_conflict: on_conflict}
+    {:ok, restart(state)}
+  end
+
+  @doc false
+  def handle_info({:DOWN, _, :process, pid, :normal}, state = %State{pid: pid}) do
+    # Managed process exited normally. Shut manager down as well.
     {:stop, :normal, state}
   end
 
-  def handle_info({:DOWN, ref, :process, _, _reason}, %State{ref: ref, ref_type: :local} = state) do
-    # Local process exited with reason other than :normal. Process linking will take care of this.
-    {:noreply, state}
+  def handle_info({:DOWN, _, :process, pid, _reason}, state = %State{pid: pid}) do
+    # Managed process exited with an error. Try restarting, after a delay
+    Process.sleep(:rand.uniform(5_000) + 5_000)
+    {:noreply, restart(state)}
   end
 
-  def handle_info({:DOWN, ref, :process, _, _reason}, %State{ref: ref, ref_type: :remote} = state) do
-    # Remote process exited. Try starting a new process.
-    {:noreply, start_child(state)}
-  end
+  defp restart(state) do
+    start_result = GenServer.start_link(state.mod, state.args, name: {:global, state.name})
 
-  @doc false
-  defp start_child(%State{init_arg: init_arg, module: module, name: name} = state) do
-    case GenServer.start_link(module, init_arg, name: {:global, name}) do
-      {:ok, pid} ->
-        %{state | ref: Process.monitor(pid), ref_type: :local}
+    pid =
+      case start_result do
+        {:ok, pid} ->
+          pid
 
-      {:error, {:already_started, pid}} ->
-        %{state | ref: Process.monitor(pid), ref_type: :remote}
-    end
+        {:error, {:already_started, pid}} ->
+          state.on_conflict.()
+          pid
+      end
+
+    Process.monitor(pid)
+    %State{state | pid: pid}
   end
 end
