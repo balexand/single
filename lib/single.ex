@@ -21,20 +21,19 @@ defmodule Single do
         mod: mod,
         args: args,
         name: name,
-        child_name: child_name,
-        on_conflict: on_conflict
+        child_name: child_name
       ) do
-    GenServer.start_link(__MODULE__, [mod, args, name, on_conflict], name: child_name)
+    GenServer.start_link(__MODULE__, [mod, args, name], name: child_name)
   end
 
   defmodule State do
     @moduledoc false
-    defstruct pid: nil, mod: nil, args: nil, name: nil, on_conflict: nil
+    defstruct pid: nil, mod: nil, args: nil, name: nil
   end
 
   @doc false
-  def init([mod, args, name, on_conflict]) do
-    state = %State{mod: mod, args: args, name: name, on_conflict: on_conflict}
+  def init([mod, args, name]) do
+    state = %State{mod: mod, args: args, name: name}
     {:ok, restart(state)}
   end
 
@@ -59,7 +58,6 @@ defmodule Single do
           pid
 
         {:error, {:already_started, pid}} ->
-          state.on_conflict.()
           pid
       end
 
