@@ -45,15 +45,10 @@ defmodule Single do
   end
 
   defp restart(state) do
-    start_result = state.mod.start_link(state.args, name: {:global, state.name})
-
     pid =
-      case start_result do
-        {:ok, pid} ->
-          pid
-
-        {:error, {:already_started, pid}} ->
-          pid
+      case state.mod.start_link(state.args, name: {:global, state.name}) do
+        {:ok, pid} -> pid
+        {:error, {:already_started, pid}} -> pid
       end
 
     Process.monitor(pid)
