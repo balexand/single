@@ -12,7 +12,12 @@ defmodule Single do
 
   use GenServer, restart: :transient
 
-  require Logger
+  @doc """
+  Like `start_link/4`, except without link.
+  """
+  def start(mod, args, name, opts \\ []) do
+    GenServer.start(__MODULE__, [mod, args, name], opts)
+  end
 
   @doc """
   Start the manager process, registering it under a unique name.

@@ -44,4 +44,33 @@ defmodule SingleTest do
 
     assert_receive {:DOWN, _ref, :process, ^pid, :normal}
   end
+
+  test "manager restarts child when child exits with reason other than :normal" do
+    assert {:ok, manager_pid_1} = Single.start(ExampleServer, :thearg, :example)
+    assert {:ok, _manager_pid_2} = Single.start_link(ExampleServer, :thearg, :example)
+
+    child_pid = :global.whereis_name(:example)
+
+    assert Process.alive?(manager_pid_1)
+    assert Process.alive?(child_pid)
+
+    Process.monitor(manager_pid_1)
+    Process.monitor(child_pid)
+
+    ExUnit.CaptureLog.capture_log([level: :error], fn ->
+      assert GenServer.call({:global, :example}, {:stop, :abnormal}) == :ok
+    end)
+
+    # Both the child and manager 1 have crashed. In a real application a supervisor would restart
+    # manager 1 and child would be restored quickly.
+    assert_receive {:DOWN, _ref, :process, ^manager_pid_1, :abnormal}
+    assert_receive {:DOWN, _ref, :process, ^child_pid, :abnormal}
+
+    refute Process.alive?(manager_pid_1)
+    refute Process.alive?(child_pid)
+    assert :global.whereis_name(:example) == :undefined
+
+    :timer.sleep(10_000)
+    assert :global.whereis_name(:example) |> Process.alive?()
+  end
 end
