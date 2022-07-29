@@ -17,13 +17,8 @@ defmodule Single do
   @doc """
   Start the manager process, registering it under a unique name.
   """
-  def start_link(
-        mod: mod,
-        args: args,
-        name: name,
-        child_name: child_name
-      ) do
-    GenServer.start_link(__MODULE__, [mod, args, name], name: child_name)
+  def start_link(mod, args, name, opts \\ []) do
+    GenServer.start_link(__MODULE__, [mod, args, name], opts)
   end
 
   defmodule State do
@@ -50,7 +45,7 @@ defmodule Single do
   end
 
   defp restart(state) do
-    start_result = GenServer.start_link(state.mod, state.args, name: {:global, state.name})
+    start_result = state.mod.start_link(state.args, name: {:global, state.name})
 
     pid =
       case start_result do
