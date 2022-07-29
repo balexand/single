@@ -1,21 +1,25 @@
 # Single
 
-**TODO: Add description**
+[![Package](https://img.shields.io/badge/-Package-important)](https://hex.pm/packages/single) [![Documentation](https://img.shields.io/badge/-Documentation-blueviolet)](https://hexdocs.pm/single)
+
+Runs supervised, singleton processes within an Erlang cluster.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `single` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `single` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:single, "~> 0.1.0"}
+    {:single, "~> 0.2.0"}
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/single](https://hexdocs.pm/single).
+## Usage
 
+TODO
+
+## Alternatives
+
+TODO
