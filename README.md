@@ -1,6 +1,6 @@
 # Single
 
-[![Package](https://img.shields.io/badge/-Package-important)](https://hex.pm/packages/single) [![Documentation](https://img.shields.io/badge/-Documentation-blueviolet)](https://hexdocs.pm/single)
+[![Package](https://img.shields.io/hexpm/v/single.svg)](https://hex.pm/packages/single) [![Documentation](http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat)](https://hexdocs.pm/single) ![CI](https://github.com/balexand/single/actions/workflows/elixir.yml/badge.svg)
 
 Runs supervised, singleton processes within an Erlang cluster.
 
